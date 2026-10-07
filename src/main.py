@@ -25,17 +25,40 @@ def load_prices():
 def filter_prices(prices, ticker):
     return [row for row in prices if row["ticker"] == ticker]
 
+def get_first_close(prices):
+    return float(prices[0]["close"])
 
+
+def get_last_close(prices):
+    return float(prices[-1]["close"])
+
+def display_market_summary(asset, prices, show_currency=True):
+    currency = f" {asset['currency']}" if show_currency else ""
+
+    print(f"{asset['ticker']} - {asset['name']}")
+    print(f"Observations : {len(prices)}")
+    print(f"First close  : {get_first_close(prices):.2f}{currency}")
+    print(f"Last close   : {get_last_close(prices):.2f}{currency}")
+    
+def display_configuration():
+    print("Market configuration")
+    print(f"Period   : {LOOKBACK_LABEL}")
+    print(f"Interval : {INTERVAL_LABEL}")
+
+'''
 def main():
     instruments = load_instruments()
     prices = load_prices()
 
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
-
+    
     instrument_prices = filter_prices(prices, instrument["ticker"])
     benchmark_prices = filter_prices(prices, benchmark["ticker"])
-
+    
+    display_market_summary(instrument, instrument_prices)
+    display_market_summary(benchmark, benchmark_prices, show_currency=False)
+    
     instrument_latest = instrument_prices[-1]
     benchmark_latest = benchmark_prices[-1]
 
@@ -55,7 +78,27 @@ def main():
     print("Observations")
     print(f"{instrument['ticker']}: {len(instrument_prices)}")
     print(f"{benchmark['ticker']}: {len(benchmark_prices)}")
+'''
 
+def main():
+    instruments = load_instruments()
+    prices = load_prices()
+
+    instrument = instruments["instrument"]
+    benchmark = instruments["benchmark"]
+
+    instrument_prices = filter_prices(prices, instrument["ticker"])
+    benchmark_prices = filter_prices(prices, benchmark["ticker"])
+
+    print("=== MarketPulse ===")
+    print()
+    display_configuration()
+    print()
+    print("Instrument")
+    display_market_summary(instrument, instrument_prices)
+    print()
+    print("Benchmark")
+    display_market_summary(benchmark, benchmark_prices, show_currency=False)
 
 if __name__ == "__main__":
     main()
