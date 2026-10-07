@@ -1,29 +1,38 @@
-from pathlib import Path
 import csv
 import json
-
+from pathlib import Path
 
 DATA_DIR = Path("data/sample")
 
-# These starter values mirror config/settings.yml.
-# settings.yml is a human-readable configuration contract in the CORE.
-# Parsing YAML is optional and is not required by the 18-hour lab sequence.
-LOOKBACK_LABEL = "1 month"
-INTERVAL_LABEL = "Daily"
-
 
 def load_instruments():
-    with open(DATA_DIR / "instruments.json", encoding="utf-8") as file:
-        return json.load(file)
+    with open(DATA_DIR / "instruments.json", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def load_prices():
-    with open(DATA_DIR / "prices.csv", encoding="utf-8") as file:
-        return list(csv.DictReader(file))
+    with open(DATA_DIR / "prices.csv", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
 
 def filter_prices(prices, ticker):
-    return [row for row in prices if row["ticker"] == ticker]
+    return [p for p in prices if p["ticker"] == ticker]
+
+
+def get_first_close(prices):
+    return float(prices[0]["close"])
+
+
+def get_last_close(prices):
+    return float(prices[-1]["close"])
+
+
+def display_market_summary(asset, prices, show_currency=True):
+    currency = f" {asset['currency']}" if show_currency else ""
+    print(f"{asset['ticker']} - {asset['name']}")
+    print(f"Observations : {len(prices)}")
+    print(f"First close  : {get_first_close(prices):.2f}{currency}")
+    print(f"Last close   : {get_last_close(prices):.2f}{currency}\n")
 
 
 def main():
@@ -33,28 +42,22 @@ def main():
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
 
-    instrument_prices = filter_prices(prices, instrument["ticker"])
-    benchmark_prices = filter_prices(prices, benchmark["ticker"])
+    inst_prices = filter_prices(prices, instrument["ticker"])
+    bench_prices = filter_prices(prices, benchmark["ticker"])
 
-    instrument_latest = instrument_prices[-1]
-    benchmark_latest = benchmark_prices[-1]
+    # En-tête de configuration
+    print("=== MarketPulse ===\n")
+    print("Market configuration")
+    print("Period   : 1 month")
+    print("Interval : Daily\n")
 
-    print("=== MarketPulse ===")
-    print()
+    # Instrument
     print("Instrument")
-    print(f"{instrument['ticker']} - {instrument['name']}")
-    print(f"Last price: {instrument_latest['close']} {instrument['currency']}")
-    print()
+    display_market_summary(instrument, inst_prices, show_currency=True)
+
+    # Benchmark
     print("Benchmark")
-    print(f"{benchmark['ticker']} - {benchmark['name']}")
-    print(f"Last level: {benchmark_latest['close']}")
-    print()
-    print(f"Period: {LOOKBACK_LABEL}")
-    print(f"Interval: {INTERVAL_LABEL}")
-    print()
-    print("Observations")
-    print(f"{instrument['ticker']}: {len(instrument_prices)}")
-    print(f"{benchmark['ticker']}: {len(benchmark_prices)}")
+    display_market_summary(benchmark, bench_prices, show_currency=False)
 
 
 if __name__ == "__main__":
