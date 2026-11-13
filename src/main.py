@@ -64,6 +64,7 @@ def main():
     prices = load_prices()
 
     instrument = instruments["instrument"]
+    print(instrument)
     benchmark = instruments["benchmark"]
 
     instrument_prices = filter_prices(prices, instrument["ticker"])
