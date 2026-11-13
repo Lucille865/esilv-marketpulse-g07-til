@@ -55,7 +55,8 @@ def display_configuration():
     print(f"Interval : {INTERVAL_LABEL}")
 
 
-
+#main
+print()
 def main():
     instruments = load_instruments()
     prices = load_prices()
@@ -64,6 +65,7 @@ def main():
     instrument = instruments["instrument"]
     print(instrument)
 
+    #Tom's merge 
     benchmark = instruments["benchmark"]
     print(benchmark)
 
