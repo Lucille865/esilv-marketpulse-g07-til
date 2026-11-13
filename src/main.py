@@ -62,6 +62,7 @@ def main():
 
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
+    print(benchmark)
 
     instrument_prices = filter_prices(prices, instrument["ticker"])
     benchmark_prices = filter_prices(prices, benchmark["ticker"])
