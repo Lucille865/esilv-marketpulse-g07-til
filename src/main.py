@@ -60,8 +60,10 @@ def main():
     instruments = load_instruments()
     prices = load_prices()
 
+    #Lucille's merge
     instrument = instruments["instrument"]
     print(instrument)
+
     benchmark = instruments["benchmark"]
     print(benchmark)
 
