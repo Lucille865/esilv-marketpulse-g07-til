@@ -10,6 +10,9 @@ from analytics import (
     calculate_relative_performance,
 )
 
+# TD08
+from providers.yahoo_provider import YAHOO_SYMBOLS, fetch_yahoo_prices
+
 DATA_DIR = Path("data/sample")
 
 LOOKBACK_LABEL = "1 month"
@@ -80,10 +83,6 @@ def display_configuration():
 print()
 def main():
     instruments = load_instruments()
-    prices = load_prices()
-
-    # TD07 - conversion en types numériques
-    prices = [normalize_price_row(row) for row in prices]
 
     #Lucille's merge
     instrument = instruments["instrument"]
@@ -93,10 +92,21 @@ def main():
     benchmark = instruments["benchmark"]
     print(benchmark)
 
-    instrument_prices = filter_prices(prices, instrument["ticker"])
-    benchmark_prices = filter_prices(prices, benchmark["ticker"])
+    # TD08
+    instrument_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
+        canonical_ticker=instrument["ticker"],
+        period="1mo",
+        interval="1d",
+    )
+    benchmark_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
+        canonical_ticker=benchmark["ticker"],
+        period="1mo",
+        interval="1d",
+    )
 
-    # TD07 
+    # TD07
     aligned_instrument, aligned_benchmark = align_series(
         instrument_prices,
         benchmark_prices,
@@ -115,21 +125,25 @@ def main():
 
     print("=== MarketPulse ===")
     print()
+    # TD08
+    print("Provider")
+    print("Yahoo Finance via yfinance")
+    print()
     display_configuration()
     print()
     print("Instrument")
     print(f"{instrument['ticker']} - {instrument['name']}")
-    print(f"Last price: {instrument_latest['close']} {instrument['currency']}")
-    print(f"Start date   : {get_first_date(prices)}")
-    print(f"End date     : {get_last_date(prices)}")
+    print(f"Last price: {instrument_latest['close']:.2f} {instrument['currency']}")  # TD08
+    print(f"Start date   : {get_first_date(instrument_prices)}")  # TD08
+    print(f"End date     : {get_last_date(instrument_prices)}")  # TD08
     display_market_summary(instrument, instrument_prices, show_currency=True)
     print(f"Period return : {instrument_return:.2f}%")  # TD07
     print()
     print("Benchmark")
     print(f"{benchmark['ticker']} - {benchmark['name']}")
-    print(f"Last level: {benchmark_latest['close']}")
-    print(f"Start date   : {get_first_date(prices)}")
-    print(f"End date     : {get_last_date(prices)}")
+    print(f"Last level: {benchmark_latest['close']:.2f}")  # TD08
+    print(f"Start date   : {get_first_date(benchmark_prices)}")  # TD08
+    print(f"End date     : {get_last_date(benchmark_prices)}")  # TD08
     print(f"Period return : {benchmark_return:.2f}%")  # TD07
     print()
     print(f"Period: {LOOKBACK_LABEL}")
