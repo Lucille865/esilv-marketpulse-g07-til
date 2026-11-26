@@ -54,8 +54,24 @@ def display_configuration():
     print(f"Period   : {LOOKBACK_LABEL}")
     print(f"Interval : {INTERVAL_LABEL}")
 
+def normalize_price_row(row):
+    return {
+        "date": row["date"],
+        "ticker": row["ticker"],
+        "open": float(row["open"]),
+        "high": float(row["high"]),
+        "low": float(row["low"]),
+        "close": float(row["close"]),
+        "volume": int(row["volume"]),
+    }
 
-
+normalized_prices = [
+    normalize_price_row(row)
+    for row in prices
+]
+    
+#main
+print()
 def main():
     instruments = load_instruments()
     prices = load_prices()
@@ -64,6 +80,7 @@ def main():
     instrument = instruments["instrument"]
     print(instrument)
 
+    #Tom's merge 
     benchmark = instruments["benchmark"]
     print(benchmark)
 
