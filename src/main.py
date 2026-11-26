@@ -1,4 +1,4 @@
-import csv
+﻿import csv
 import json
 from pathlib import Path
 
@@ -9,13 +9,18 @@ from analytics import (
     calculate_relative_performance,
 )
 
+from providers.yahoo_provider import (
+    fetch_yahoo_prices,
+    YAHOO_SYMBOLS,
+)
+
 DATA_DIR = Path("data/sample")
 
 LOOKBACK_LABEL = "1 month"
 INTERVAL_LABEL = "Daily"
 
 
-# --- Chargement des données ---
+# --- Data loading ---
 
 def load_instruments():
     with open(DATA_DIR / "instruments.json", encoding="utf-8") as f:
@@ -39,8 +44,6 @@ def load_prices():
         return [normalize_price_row(row) for row in csv.DictReader(f)]
 
 
-# --- Traitement & Extraction ---
-
 def filter_prices(prices, ticker):
     return [p for p in prices if p["ticker"] == ticker]
 
@@ -61,7 +64,7 @@ def get_last_date(prices):
     return prices[-1]["date"]
 
 
-# --- Affichage ---
+# --- Display ---
 
 def display_market_summary(asset, prices, show_currency=True):
     currency = f" {asset['currency']}" if show_currency else ""
@@ -84,18 +87,31 @@ def display_configuration():
 
 def main():
     instruments = load_instruments()
-    prices = load_prices()
 
     instrument = instruments["instrument"]
     benchmark = instruments["benchmark"]
 
-    inst_prices = filter_prices(prices, instrument["ticker"])
-    bench_prices = filter_prices(prices, benchmark["ticker"])
+    instrument_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
+        canonical_ticker=instrument["ticker"],
+        period="1mo",
+        interval="1d",
+    )
+
+    benchmark_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
+        canonical_ticker=benchmark["ticker"],
+        period="1mo",
+        interval="1d",
+    )
 
     aligned_instrument, aligned_benchmark = align_series(
-        inst_prices,
-        bench_prices,
+        instrument_prices,
+        benchmark_prices,
     )
+
+    if not aligned_instrument or not aligned_benchmark:
+        raise ValueError("No common observation dates")
 
     instrument_return = calculate_period_return(aligned_instrument)
     benchmark_return = calculate_period_return(aligned_benchmark)
@@ -110,6 +126,9 @@ def main():
 
     print("=== MarketPulse ===\n")
 
+    print("Provider")
+    print("Yahoo Finance via yfinance\n")
+
     display_configuration()
     print()
 
@@ -117,14 +136,14 @@ def main():
     display_market_summary(
         instrument, aligned_instrument, show_currency=True
     )
-    print(f"Period return : {instrument_return:.2f}%")
+    print(f"Period return : {instrument_return:+.2f}%")
     print()
 
     print("Benchmark")
     display_market_summary(
         benchmark, aligned_benchmark, show_currency=False
     )
-    print(f"Period return : {benchmark_return:.2f}%")
+    print(f"Period return : {benchmark_return:+.2f}%")
     print()
 
     print("Relative performance")
