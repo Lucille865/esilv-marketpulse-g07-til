@@ -1,12 +1,13 @@
 import csv
 import json
 from pathlib import Path
-from analytics import (
+from src.analytics import (
     align_series,
     calculate_base_100,
     calculate_period_return,
     calculate_relative_performance,
 )
+from src.providers.yahoo_provider import YAHOO_SYMBOLS, fetch_yahoo_prices
 
 DATA_DIR = Path("data/sample")
 
@@ -76,11 +77,11 @@ def normalize_price_row(row):
 print()
 def main():
     instruments = load_instruments()
-    prices = load_prices()
-    normalized_prices = [
-    normalize_price_row(row)
-    for row in prices
-    ]
+    #prices = load_prices()
+    #normalized_prices = [
+    #normalize_price_row(row)
+    #for row in prices
+    #]
 
     #Lucille's merge
     instrument = instruments["instrument"]
@@ -90,8 +91,22 @@ def main():
     benchmark = instruments["benchmark"]
     print(benchmark)
 
-    instrument_prices = filter_prices(normalized_prices, instrument["ticker"])
-    benchmark_prices = filter_prices(normalized_prices, benchmark["ticker"])
+    #instrument_prices = filter_prices(normalized_prices, instrument["ticker"])
+    #benchmark_prices = filter_prices(normalized_prices, benchmark["ticker"])
+
+    instrument_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
+        canonical_ticker=instrument["ticker"],
+        period="1mo",
+        interval="1d",
+    )
+
+    benchmark_prices = fetch_yahoo_prices(
+        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
+        canonical_ticker=benchmark["ticker"],
+        period="1mo",
+        interval="1d",
+    )
 
     aligned_instrument, aligned_benchmark = align_series(
     instrument_prices,
@@ -117,15 +132,15 @@ def main():
     print("Instrument")
     print(f"{instrument['ticker']} - {instrument['name']}")
     print(f"Last price: {instrument_latest['close']} {instrument['currency']}")
-    print(f"Start date   : {get_first_date(prices)}")
-    print(f"End date     : {get_last_date(prices)}")
+    print(f"Start date   : {get_first_date(aligned_instrument)}")
+    print(f"End date     : {get_last_date(aligned_instrument)}")
     display_market_summary(instrument, instrument_prices, show_currency=True)
     print()
     print("Benchmark")
     print(f"{benchmark['ticker']} - {benchmark['name']}")
     print(f"Last level: {benchmark_latest['close']}")
-    print(f"Start date   : {get_first_date(prices)}")
-    print(f"End date     : {get_last_date(prices)}")
+    print(f"Start date   : {get_first_date(aligned_instrument)}")
+    print(f"End date     : {get_last_date(aligned_instrument)}")
     print()
     print(f"Period: {LOOKBACK_LABEL}")
     print(f"Interval: {INTERVAL_LABEL}")
@@ -135,8 +150,14 @@ def main():
     print(f"{benchmark['ticker']}: {len(benchmark_prices)}")
     display_market_summary(benchmark, benchmark_prices, show_currency=False)
 
-    print(type(normalized_prices[0]["close"]))
-    print(type(normalized_prices[0]["volume"]))
+    print("Provider")
+    print("Yahoo Finance via yfinance")
+    print()
+    print("Market configuration")
+    print(f"Instrument : {instrument['ticker']} - {instrument['name']}")
+    print(f"Benchmark  : {benchmark['name']}")
+    print(f"Period     : {LOOKBACK_LABEL}")
+    print(f"Interval   : {INTERVAL_LABEL}")
 
 
 if __name__ == "__main__":
