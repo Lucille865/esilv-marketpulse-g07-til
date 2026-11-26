@@ -1,0 +1,290 @@
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> cat data/sample/instruments.json
+{
+  "instrument": {
+    "ticker": "AAPL",
+    "name": "Apple Inc.",
+    "currency": "USD",
+    "market": "NASDAQ"
+  },
+  "benchmark": {
+    "ticker": "SP500",
+    "name": "S&P 500",
+    "currency": "USD",
+    "market": "US"
+  }
+}
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python
+Python 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import json
+>>> from pathlib import Path
+>>>
+>>> DATA_DIR = Path("data/sample")
+>>>
+>>> with open(DATA_DIR / "instruments.json", encoding="utf-8") as file:
+...     instruments = json.load(file)
+...
+>>> print(type(instruments))
+<class 'dict'>
+>>> print(instruments.keys())
+dict_keys(['instrument', 'benchmark'])
+>>>
+>>> instrument = instruments["instrument"]
+>>> benchmark = instruments["benchmark"]
+>>>
+>>> print(instrument["ticker"])
+AAPL
+>>> print(instrument["name"])
+Apple Inc.
+>>> print(instrument["currency"])
+USD
+>>>
+>>> print(benchmark["ticker"])
+SP500
+>>> print(benchmark["name"])
+S&P 500
+>>> exit ()
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python src/main.py
+=== MarketPulse ===
+
+Instrument
+AAPL - Apple Inc.
+Last price: 266.20 USD
+
+Benchmark
+SP500 - S&P 500
+Last level: 6742.00
+
+Period: 1 month
+Interval: Daily
+
+Observations
+AAPL: 21
+SP500: 21
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> Get-Content data/sample/prices.csv -Head 10
+date,ticker,open,high,low,close,volume
+2026-09-01,AAPL,249.20,251.50,248.00,250.00,38000000
+2026-09-01,SP500,6592.00,6615.00,6580.00,6600.00,0
+2026-09-02,AAPL,250.80,252.80,249.60,251.30,39500000
+2026-09-02,SP500,6607.00,6627.00,6595.00,6612.00,0
+2026-09-03,AAPL,249.60,251.30,248.40,249.80,41000000
+2026-09-03,SP500,6596.00,6613.00,6584.00,6598.00,0
+2026-09-04,AAPL,251.30,253.60,250.10,252.10,42500000
+2026-09-04,SP500,6612.00,6635.00,6600.00,6620.00,0
+2026-09-08,AAPL,251.90,253.90,250.70,252.40,44000000
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python
+Python 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import csv
+>>> from pathlib import Path
+>>>
+>>> DATA_DIR = Path("data/sample")
+>>>
+>>> def load_prices():
+...     with open(DATA_DIR / "prices.csv", encoding="utf-8") as file:
+...         return list(csv.DictReader(file))
+...
+>>> prices = load_prices()
+>>>
+>>> # 1. Vérifier le type de la structure globale
+>>> print(type(prices))
+<class 'list'>
+>>>
+>>> # 2. Vérifier le type et le contenu du premier élément
+>>> print(type(prices[0]))
+<class 'dict'>
+>>> print(prices[0])
+{'date': '2026-09-01', 'ticker': 'AAPL', 'open': '249.20', 'high': '251.50', 'low': '248.00', 'close': '250.00', 'volume': '38000000'}
+>>>
+>>> # 3. Vérifier que la valeur de 'close' est bien une chaîne de caractères (str)
+>>> print(prices[0]["close"])
+250.00
+>>> print(type(prices[0]["close"]))
+<class 'str'>
+>>>
+>>> # 4. Convertir explicitement en nombre flottant (float)
+>>> close = float(prices[0]["close"])
+>>> print(close)
+250.0
+>>> print(type(close))
+<class 'float'>
+>>> exit()
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python
+Python 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import json
+>>> import csv
+>>> from pathlib import Path
+>>>
+>>> DATA_DIR = Path("data/sample")
+>>>
+>>> # 1. Chargement des instruments et des prix
+>>> with open(DATA_DIR / "instruments.json", encoding="utf-8") as file:
+...     instruments = json.load(file)
+...
+>>> with open(DATA_DIR / "prices.csv", encoding="utf-8") as file:
+...     prices = list(csv.DictReader(file))
+...
+>>> instrument = instruments["instrument"]
+>>> benchmark = instruments["benchmark"]
+>>>
+>>> # 2. Définition de la fonction de filtrage (List Comprehension)
+>>> def filter_prices(prices, ticker):
+...     return [row for row in prices if row["ticker"] == ticker]
+...
+>>> # 3. Filtrage pour l'instrument principal (AAPL) et le benchmark (SP500)
+>>> instrument_prices = filter_prices(prices, instrument["ticker"])
+>>> benchmark_prices = filter_prices(prices, benchmark["ticker"])
+>>>
+>>> # 4. Vérification des longueurs
+>>> print(len(instrument_prices))
+21
+>>> print(len(benchmark_prices))
+21
+>>> exit()
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python
+Python 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import json
+>>> import csv
+>>> from pathlib import Path
+>>>
+>>> DATA_DIR = Path("data/sample")
+>>>
+>>> # 1. Chargement des données et filtrage
+>>> with open(DATA_DIR / "instruments.json", encoding="utf-8") as file:
+...     instruments = json.load(file)
+...
+>>> with open(DATA_DIR / "prices.csv", encoding="utf-8") as file:
+...     prices = list(csv.DictReader(file))
+...
+>>> def filter_prices(prices, ticker):
+...     return [row for row in prices if row["ticker"] == ticker]
+...
+>>> instrument_prices = filter_prices(prices, instruments["instrument"]["ticker"])
+>>> benchmark_prices = filter_prices(prices, instruments["benchmark"]["ticker"])
+>>>
+>>> # 2. Définition des deux fonctions
+>>> def get_first_close(prices):
+...     return float(prices[0]["close"])
+...
+>>> def get_last_close(prices):
+...     return float(prices[-1]["close"])
+...
+>>> # 3. Tests et vérifications
+>>> print("AAPL first close:", get_first_close(instrument_prices))
+AAPL first close: 250.0
+>>> print("AAPL last close:", get_last_close(instrument_prices))
+AAPL last close: 266.2
+>>>
+>>> print("SP500 first close:", get_first_close(benchmark_prices))
+SP500 first close: 6600.0
+>>> print("SP500 last close:", get_last_close(benchmark_prices))
+SP500 last close: 6742.0
+>>> exit()
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python
+Python 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import json
+>>> import csv
+>>> from pathlib import Path
+>>>
+>>> DATA_DIR = Path("data/sample")
+>>>
+>>> # 1. Chargement des données
+>>> with open(DATA_DIR / "instruments.json", encoding="utf-8") as file:
+...     instruments = json.load(file)
+...
+>>> with open(DATA_DIR / "prices.csv", encoding="utf-8") as file:
+...     prices = list(csv.DictReader(file))
+...
+>>> # Fonctions utilitaires
+>>> def filter_prices(prices, ticker):
+...     return [row for row in prices if row["ticker"] == ticker]
+...
+>>> def get_first_close(prices):
+...     return float(prices[0]["close"])
+...
+>>> def get_last_close(prices):
+...     return float(prices[-1]["close"])
+...
+>>> # 2. Fonction réutilisable pour afficher le résumé de marché
+>>> def display_market_summary(asset, prices, show_currency=True):
+...     ticker = asset["ticker"]
+...     name = asset["name"]
+...     nb_obs = len(prices)
+...     first = get_first_close(prices)
+...     last = get_last_close(prices)
+...
+...     currency_suffix = f" {asset['currency']}" if show_currency and "currency" in asset else ""
+...
+...     print(f"{ticker} - {name}")
+...     print(f"Observations : {nb_obs}")
+...     print(f"First close  : {first:.2f}{currency_suffix}")
+...     print(f"Last close   : {last:.2f}{currency_suffix}")
+...     print()
+...
+>>> # 3. Filtrage et affichage
+>>> instrument = instruments["instrument"]
+>>> benchmark = instruments["benchmark"]
+>>>
+>>> instrument_prices = filter_prices(prices, instrument["ticker"])
+>>> benchmark_prices = filter_prices(prices, benchmark["ticker"])
+>>>
+>>> # Affichage pour l'instrument (avec devise)
+>>> display_market_summary(instrument, instrument_prices, show_currency=True)
+AAPL - Apple Inc.
+Observations : 21
+First close  : 250.00 USD
+Last close   : 266.20 USD
+
+>>>
+>>> # Affichage pour le benchmark (sans devise)
+>>> display_market_summary(benchmark, benchmark_prices, show_currency=False)
+SP500 - S&P 500
+Observations : 21
+First close  : 6600.00
+Last close   : 6742.00
+
+>>> exit()
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python src/main.py
+=== MarketPulse ===
+
+Instrument
+AAPL - Apple Inc.
+Last price: 266.20 USD
+
+Benchmark
+SP500 - S&P 500
+Last level: 6742.00
+
+Period: 1 month
+Interval: Daily
+
+Observations
+AAPL: 21
+SP500: 21
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til>
+
+
+
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> python src/main.py
+=== MarketPulse ===
+
+Market configuration
+Period   : 1 month
+Interval : Daily
+
+Instrument
+AAPL - Apple Inc.
+Observations : 21
+First close  : 250.00 USD
+Last close   : 266.20 USD
+
+Benchmark
+SP500 - S&P 500
+Observations : 21
+First close  : 6600.00
+Last close   : 6742.00
+
+PS C:\Users\guill\ProjetGitLinuxPython\esilv-marketpulse-g07-til> 
