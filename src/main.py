@@ -1,6 +1,12 @@
 import csv
 import json
 from pathlib import Path
+from analytics import (
+    align_series,
+    calculate_base_100,
+    calculate_period_return,
+    calculate_relative_performance,
+)
 
 DATA_DIR = Path("data/sample")
 
@@ -65,16 +71,16 @@ def normalize_price_row(row):
         "volume": int(row["volume"]),
     }
 
-normalized_prices = [
-    normalize_price_row(row)
-    for row in prices
-]
     
 #main
 print()
 def main():
     instruments = load_instruments()
     prices = load_prices()
+    normalized_prices = [
+    normalize_price_row(row)
+    for row in prices
+    ]
 
     #Lucille's merge
     instrument = instruments["instrument"]
@@ -84,11 +90,25 @@ def main():
     benchmark = instruments["benchmark"]
     print(benchmark)
 
-    instrument_prices = filter_prices(prices, instrument["ticker"])
-    benchmark_prices = filter_prices(prices, benchmark["ticker"])
+    instrument_prices = filter_prices(normalized_prices, instrument["ticker"])
+    benchmark_prices = filter_prices(normalized_prices, benchmark["ticker"])
+
+    aligned_instrument, aligned_benchmark = align_series(
+    instrument_prices,
+    benchmark_prices,
+    )
+
+    instrument_return = calculate_period_return(
+        aligned_instrument
+    )
+
+    benchmark_return = calculate_period_return(
+        aligned_benchmark
+    )
 
     instrument_latest = instrument_prices[-1]
     benchmark_latest = benchmark_prices[-1]
+
 
     print("=== MarketPulse ===")
     print()
@@ -114,6 +134,9 @@ def main():
     print(f"{instrument['ticker']}: {len(instrument_prices)}")
     print(f"{benchmark['ticker']}: {len(benchmark_prices)}")
     display_market_summary(benchmark, benchmark_prices, show_currency=False)
+
+    print(type(normalized_prices[0]["close"]))
+    print(type(normalized_prices[0]["volume"]))
 
 
 if __name__ == "__main__":
