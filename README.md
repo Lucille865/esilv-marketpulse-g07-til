@@ -119,7 +119,6 @@ esilv-marketpulse-g07-til/
 └── data/                  # approved sample data (Bloomberg stage)
 ```
 
-> Adjust this tree to match the actual content of the repository.
 
 ## Installation
 
