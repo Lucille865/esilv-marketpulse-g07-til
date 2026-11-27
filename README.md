@@ -1,4 +1,4 @@
-# ESILV MarketPulse
+# ESILV MarketPulse — Team g07-til
 
 <p align="center">
   <img
@@ -10,14 +10,14 @@
 
 [![Course: MESIFI472326](https://img.shields.io/badge/course-MESIFI472326-1f6feb.svg)](docs/06_TD_SEQUENCE_AND_LEARNING_PATH.md)
 [![ESILV A4](https://img.shields.io/badge/ESILV-A4-111827.svg)](docs/00_MARKETPULSE_FUNCTIONAL_CONTRACT.md)
+[![Team](https://img.shields.io/badge/team-g07--til-0969da.svg)](https://github.com/Lucille865/esilv-marketpulse-g07-til)
 [![Python](https://img.shields.io/badge/Python-3.x-3776AB.svg)](https://www.python.org/)
-[![Labs](https://img.shields.io/badge/labs-12-2ea44f.svg)](docs/labs/README.md)
 [![TD](https://img.shields.io/badge/TD-18h-orange.svg)](docs/06_TD_SEQUENCE_AND_LEARNING_PATH.md)
-[![Status](https://img.shields.io/badge/status-baseline%20ready-success.svg)](docs/16_TEACHING_BASELINE_RELEASE.md)
+[![Mode](https://img.shields.io/badge/mode-APPROVED__SAMPLE-2ea44f.svg)](docs/10_BLOOMBERG_INSTRUCTOR_REFERENCE.md)
 
-**MarketPulse** is the progressive teaching project for the **ESILV A4 - Python, Git, Linux** module.
+**MarketPulse** is our team implementation for the **ESILV A4 - Python, Git, Linux** module (`esilv-marketpulse-g07-til`).
 
-> Acquire market data from several provider stages, normalize it to one canonical contract, compare one instrument with its benchmark, then expose the same application result through the terminal and a Dash dashboard.
+> Acquire market data from provider stages, normalize it to one canonical contract, compare one instrument with its benchmark, then expose the same application snapshot through both the terminal and a Dash dashboard.
 
 ### ⚡ Languages and Tools
 
@@ -51,427 +51,190 @@
   </a>
 </p>
 
-## What students build
+## Table of contents
 
-MarketPulse starts deliberately small and evolves across 12 practical labs.
+- [What MarketPulse does](#what-marketpulse-does)
+- [Architecture](#architecture)
+- [Project structure](#project-structure)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Data providers](#data-providers)
+- [Canonical data contract](#canonical-data-contract)
+- [Metrics](#metrics)
+- [Testing](#testing)
+- [Git workflow](#git-workflow)
+- [Documentation](#documentation)
+- [Team](#team)
 
-The common business model is:
+## What MarketPulse does
 
-```text
-1 Instrument
-+
-1 Benchmark
-+
-1 Provider
-+
-1 Historical Window
-+
-1 Interval
-+
-Performance Comparison
-```
+MarketPulse compares the performance of a financial instrument against a reference benchmark over the same historical window and frequency, using a single shared application snapshot (`build_market_snapshot()` in `src/main.py`) consumed identically by the terminal CLI and the Dash web interface.
 
-CORE defaults:
+Team configuration:
 
 ```text
 Instrument : AAPL - Apple Inc.
-Benchmark  : S&P 500
+Benchmark  : SP500 - S&P 500
 Lookback   : 1 month
 Interval   : Daily
+Provider   : Bloomberg stage - APPROVED_SAMPLE (with Yahoo Finance / yfinance support)
 ```
 
-The provider progression is:
+## Architecture
+
+The application follows a simple pipeline, and every interface reads the same output:
 
 ```text
-CSV / JSON
-    |
-    v
-Yahoo Finance
-    |
-    v
-Bloomberg stage
-    |
-    v
-Canonical Market Data
-    |
-    v
-Shared Analytics
-    |
-    v
-Application Snapshot
-    |
-    +----------------+
-    |                |
-    v                v
-Terminal            Dash
+ ┌───────────────┐   ┌───────────────┐   ┌───────────────┐   ┌───────────────────────┐
+ │  Providers    │ → │ Normalization │ → │  Comparison   │ → │ build_market_snapshot │
+ │ Bloomberg /   │   │ canonical     │   │ instrument vs │   │ (single source of     │
+ │ Yahoo Finance │   │ contract      │   │ benchmark     │   │ truth)                │
+ └───────────────┘   └───────────────┘   └───────────────┘   └───────────┬───────────┘
+                                                                         │
+                                                       ┌─────────────────┴───────────────┐
+                                                       ▼                                 ▼
+                                                 Terminal CLI                    Dash dashboard
 ```
 
-## Core analytical contract
+Design principles:
 
-The required financial concepts stay intentionally small:
+1. **One contract**: all providers are normalized to the same schema before any computation.
+2. **One snapshot**: the CLI and the dashboard never recompute metrics independently.
+3. **Replaceable providers**: switching from `APPROVED_SAMPLE` to Yahoo Finance requires no change downstream.
+
+## Project structure
 
 ```text
-period return
-+
-base-100 normalization
-+
-relative performance
+esilv-marketpulse-g07-til/
+├── README.md
+├── requirements.txt
+├── docs/
+│   ├── 00_MARKETPULSE_FUNCTIONAL_CONTRACT.md
+│   ├── 06_TD_SEQUENCE_AND_LEARNING_PATH.md
+│   └── 10_BLOOMBERG_INSTRUCTOR_REFERENCE.md
+├── src/
+│   ├── main.py            # build_market_snapshot() + CLI entry point
+│   └── ...                # providers, normalization, metrics, dashboard
+├── tests/
+└── data/                  # approved sample data (Bloomberg stage)
 ```
 
-Daily returns, volume analysis and richer quantitative indicators are optional extensions.
+> Adjust this tree to match the actual content of the repository.
 
-The central business question is:
+## Installation
 
-> Is the selected instrument outperforming or underperforming its benchmark over the same period and frequency?
+### Prerequisites
 
-See [the functional contract](docs/00_MARKETPULSE_FUNCTIONAL_CONTRACT.md).
+- Python 3.x
+- Git
+- A Linux / macOS shell (or WSL on Windows)
 
-## Application architecture
+### Setup
 
-The frozen 18-hour CORE Python structure is:
+```bash
+# 1. Clone the repository
+git clone https://github.com/Lucille865/esilv-marketpulse-g07-til.git
+cd esilv-marketpulse-g07-til
 
-```text
-src/
-├── main.py
-├── analytics.py
-├── dashboard.py
-└── providers/
-    ├── __init__.py
-    ├── yahoo_provider.py
-    └── bloomberg_provider.py
+# 2. Create and activate a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
 ```
 
-Responsibilities:
+## Usage
 
-```text
-providers/
-=
-provider-specific acquisition
-+
-normalization to canonical rows
-
-analytics.py
-=
-alignment
-+
-period return
-+
-base 100
-+
-relative performance
-
-main.py
-=
-application orchestration
-+
-build_market_snapshot(...)
-+
-terminal presentation
-
-dashboard.py
-=
-Dash presentation
-+
-snapshot consumption
-```
-
-The application result shared by terminal and Dash is defined in [the snapshot contract](docs/12_MARKETPULSE_APPLICATION_SNAPSHOT_CONTRACT.md).
-
-The design principle is:
-
-```text
-Acquire once
-normalize once
-calculate once
-present many times
-```
-
-## Canonical runtime
-
-Terminal:
+### Terminal (CLI)
 
 ```bash
 python src/main.py
 ```
 
-Dashboard, introduced in TD11:
+Prints the snapshot for `AAPL` vs `SP500` (1 month, daily): normalized series summary and comparison metrics.
+
+### Dash dashboard
 
 ```bash
-python src/dashboard.py
+python src/main.py --dash
 ```
 
-These are the two canonical CORE runtime commands.
+Then open <http://127.0.0.1:8050> in your browser.
 
-The instructor starter repository does not necessarily contain every later-stage student file on day one. Files appear progressively during the lab sequence.
+> The exact flags depend on the CLI implemented in `src/main.py`. Update the commands above if needed.
 
-## Installation
+### Programmatic access
 
-The starter TD01-TD02 path uses only the Python standard library.
+```python
+from src.main import build_market_snapshot
 
-Later labs add direct dependencies as required.
+snapshot = build_market_snapshot()
+print(snapshot)
+```
 
-When `requirements.txt` contains the dependencies for the current stage:
+## Data providers
+
+| Provider | Mode | Description |
+|---|---|---|
+| Bloomberg stage | `APPROVED_SAMPLE` | Approved sample extract used for reproducible, offline runs (see [instructor reference](docs/10_BLOOMBERG_INSTRUCTOR_REFERENCE.md)). |
+| Yahoo Finance | `yfinance` | Live public data, useful for development and comparison. |
+
+No Bloomberg Terminal access is required: the `APPROVED_SAMPLE` mode ships a validated sample dataset.
+
+## Canonical data contract
+
+Every provider output is normalized to the same structure before analysis:
+
+| Field | Description |
+|---|---|
+| `date` | Trading date (daily frequency) |
+| `symbol` | Instrument or benchmark identifier (`AAPL`, `SP500`) |
+| `close` | Closing price |
+| `provider` | Source of the data |
+
+The full specification lives in [`docs/00_MARKETPULSE_FUNCTIONAL_CONTRACT.md`](docs/00_MARKETPULSE_FUNCTIONAL_CONTRACT.md).
+
+## Metrics
+
+Computed over the common historical window for the instrument and the benchmark:
+
+- Cumulative return over the lookback period
+- Daily returns
+- Relative performance (instrument minus benchmark)
+- Rebased series (base 100) for chart comparison
+
+## Testing
 
 ```bash
-python -m pip install -r requirements.txt
+pytest tests/
 ```
 
-Typical later-stage dependencies include:
+## Git workflow
 
-```text
-yfinance
-dash
-plotly
-```
+- `main`: stable, validated version
+- One feature branch per task: `feature/<short-description>`
+- Small, atomic commits with explicit messages (e.g. `feat: add yfinance provider`)
+- Merge through Pull Request, reviewed by at least one teammate
 
-The complete dependency model, including standard-library modules, transitive dependencies, Bloomberg environment rules and explicit CORE exclusions, is documented in:
+## Documentation
 
-[MarketPulse libraries and dependencies](docs/13_MARKETPULSE_LIBRARIES_AND_DEPENDENCIES.md)
+| Document | Purpose |
+|---|---|
+| [Functional contract](docs/00_MARKETPULSE_FUNCTIONAL_CONTRACT.md) | What the application must deliver |
+| [TD sequence & learning path](docs/06_TD_SEQUENCE_AND_LEARNING_PATH.md) | Course progression (18h) |
+| [Bloomberg instructor reference](docs/10_BLOOMBERG_INSTRUCTOR_REFERENCE.md) | `APPROVED_SAMPLE` mode details |
 
-Do not add packages that are not actually required by the implementation.
+## Team
 
-## Bloomberg teaching modes
+**Team g07-til** — ESILV A4, course MESIFI472326.
 
-The Bloomberg stage supports two authorized classroom modes:
+| Member | GitHub |
+|---|---|
+| Lucille | [@Lucille865](https://github.com/Lucille865) |
+| Ines | |
+| Tom | |
 
-```text
-LIVE
-or
-APPROVED_SAMPLE
-```
+## License
 
-`LIVE` means the instructor-approved Bloomberg environment successfully returned data.
-
-`APPROVED_SAMPLE` means the instructor fallback assets were used for mapping and normalization work.
-
-Important:
-
-```text
-APPROVED_SAMPLE
-!=
-LIVE Bloomberg evidence
-```
-
-Instructor reference:
-
-```text
-docs/10_BLOOMBERG_INSTRUCTOR_REFERENCE.md
-```
-
-## Student Git workflow
-
-The collaboration model is:
-
-```text
-one team
-=
-one shared fork
-```
-
-Team repository naming:
-
-```text
-<owner>/esilv-marketpulse-gXX-tYY
-```
-
-Typical contribution flow:
-
-```text
-feature branch
-      |
-      v
-commit
-      |
-      v
-push
-      |
-      v
-Pull Request
-      |
-      v
-review
-      |
-      v
-merge
-```
-
-Start with:
-
-- [Student onboarding](docs/01_STUDENT_ONBOARDING.md)
-- [Git team workflow](docs/03_GITHUB_TEAM_WORKFLOW.md)
-- [Contributing guide](CONTRIBUTING.md)
-
-Canonical instructor repository:
-
-```text
-tawounfouet/esilv-marketpulse
-```
-
-## 18-hour learning path
-
-The 12 TDs are organized into four pedagogical waves:
-
-```text
-WAVE 1 - Foundations - 3h
-TD01 Bootstrap + Linux
-TD02 Python + CSV / JSON
-
-WAVE 2 - Git and Collaboration - 6h
-TD03 Git Local Workflow
-TD04 Branches + Merge
-TD05 Remote Branch + Pull Request
-TD06 Code Review
-
-WAVE 3 - Comparison + Yahoo Finance - 3h
-TD07 Data Normalization + Comparison
-TD08 Yahoo Finance
-
-WAVE 4 - Professional Integration - 6h
-TD09 Bloomberg Introduction
-TD10 Bloomberg Provider
-TD11 Dash Dashboard
-TD12 Integration + Release
-```
-
-
-## Assessment checkpoints
-
-The checkpoint phases are different from the four pedagogical waves:
-
-```text
-Checkpoint A
-TD01-TD04
-Foundations
-25% of the TD grade
-
-Checkpoint B
-TD05-TD08
-Collaboration and Data
-30% of the TD grade
-
-Checkpoint C
-TD09-TD12
-Integration and Release
-45% of the TD grade
-```
-
-The canonical evidence specification is:
-
-[Checkpoint and evidence contract](docs/04_CHECKPOINTS_AND_EVIDENCE.md)
-
-Screenshots complement Git history, execution and explanation. They do not replace them.
-
-## Starter data
-
-The repository includes illustrative educational sample data for:
-
-```text
-AAPL
-SP500
-```
-
-The values are teaching data.
-
-They are not certified historical market observations.
-
-This keeps the first labs deterministic and inspectable before remote providers are introduced.
-
-## Repository evolution
-
-The repository intentionally does not expose the complete final architecture on day one.
-
-```text
-TD01-TD06
-src/main.py
-
-TD07
-+ src/analytics.py
-
-TD08
-+ src/providers/yahoo_provider.py
-
-TD09
-+ docs/BLOOMBERG_FIELD_MAPPING.md
-
-TD10
-+ src/providers/bloomberg_provider.py
-
-TD11
-+ src/dashboard.py
-
-TD12
-release validation only
-```
-
-Target structure:
-
-[Target repository structure](docs/05_TARGET_REPOSITORY_STRUCTURE.md)
-
-
-
-## Security
-
-Never commit:
-
-```text
-passwords
-API keys
-access tokens
-SSH private keys
-Bloomberg credentials
-cloud credentials
-billing information
-session secrets
-```
-
-Do not copy another student's credentials.
-
-Do not fabricate provider evidence when an external service is unavailable.
-
-
-The common CORE still does not require:
-
-```text
-tests/
-Dockerfile
-GitHub Actions
-Kubernetes
-complex packaging
-advanced CI/CD
-advanced quantitative finance
-```
-
-Current active ADVANCED work is indexed from:
-
-```text
-docs/advanced/README.md
-```
-
-The lab-to-advanced availability map is maintained in:
-
-```text
-docs/labs/README.md
-```
-
-Instructor deep dives are indexed from:
-
-```text
-docs/instructor/deep-dives/README.md
-```
-
-Some advanced supports may exist with status:
-
-```text
-PENDING_EXTERNAL
-```
-
-Such supports are not activated as student exercises until their real delivery gate passes.
-
-This README intentionally does not display CI, security, release or license badges because those contracts are not present in the CORE repository.
-
-
----
-
-**Course:** MESIFI472326 - Python, Git, Linux  
-**School:** ESILV - A4  
-**Use case:** MarketPulse - Multi-Source Financial Market Data Dashboard
+Academic project — ESILV, De Vinci Higher Education.
