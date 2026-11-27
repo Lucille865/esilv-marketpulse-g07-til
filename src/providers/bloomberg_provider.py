@@ -7,69 +7,63 @@ BLOOMBERG_IDENTIFIERS: dict[str, str] = {
     "SP500": "SPX Index",
 }
 
-DEFAULT_SAMPLE_PATH = Path("data/sample/bloomberg_reference_sample.json")
+REFERENCE_SAMPLE = Path("data/sample/bloomberg_reference_sample.json")
 
 
-def fetch_raw_bloomberg_history(
-    identifier: str,
-    start_date: str | None = None,
-    end_date: str | None = None,
-    sample_path: str | Path = DEFAULT_SAMPLE_PATH,
-) -> list[dict[str, Any]]:
-    """Fetch raw Bloomberg observations for `identifier` from the approved sample."""
-    path = Path(sample_path)
-    with path.open("r", encoding="utf-8") as f:
-        payload = json.load(f)
+def load_bloomberg_reference_sample(path: str | Path = REFERENCE_SAMPLE) -> dict[str, Any]:
+    with open(path, encoding="utf-8") as file:
+        return json.load(file)
 
-    series_list = payload.get("series", [])
-    matched_series = next(
-        (s for s in series_list if s.get("provider_identifier") == identifier),
-        None,
-    )
-    if matched_series is None:
-        raise KeyError(f"Identifier not found in sample: {identifier}")
 
-    observations = matched_series.get("observations", [])
+def find_reference_series(payload: dict[str, Any], provider_identifier: str) -> dict[str, Any]:
+    for series in payload["series"]:
+        if series["provider_identifier"] == provider_identifier:
+            return series
+    raise ValueError(f"Approved Bloomberg-stage series not found: {provider_identifier}")
 
-    filtered: list[dict[str, Any]] = []
-    for obs in observations:
-        obs_date = str(obs.get("observation_date", ""))
-        if start_date is not None and obs_date < start_date:
-            continue
-        if end_date is not None and obs_date > end_date:
-            continue
-        filtered.append(obs)
 
-    return filtered
-
-def normalize_bloomberg_history(
-    raw_data: list[dict[str, Any]],
-    canonical_ticker: str,
-    mode: str = "APPROVED_SAMPLE",
-) -> list[dict[str, Any]]:
-    """Normalize Bloomberg observations into canonical MarketPulse rows."""
-    if mode.upper() != "APPROVED_SAMPLE":
-        raise NotImplementedError(
-            f"Normalization for mode '{mode}' is not implemented; do not assume wrapper keys for LIVE."
-        )
-
-    if not canonical_ticker:
-        raise ValueError("canonical_ticker must be provided")
-
-    normalized_rows: list[dict[str, Any]] = []
-
-    for observation in raw_data:
-        volume_raw = observation.get("volume_value")
-        row: dict[str, Any] = {
-            "date": str(observation["observation_date"]),
+def normalize_reference_series(series: dict[str, Any]) -> list[dict[str, Any]]:
+    canonical_ticker = series["canonical_ticker"]
+    rows: list[dict[str, Any]] = []
+    for observation in series["observations"]:
+        rows.append({
+            "date": observation["observation_date"],
             "ticker": canonical_ticker,
             "open": float(observation["open_value"]),
             "high": float(observation["high_value"]),
             "low": float(observation["low_value"]),
             "close": float(observation["close_value"]),
-            "volume": int(volume_raw) if volume_raw is not None else 0,
-        }
-        normalized_rows.append(row)
+            "volume": int(observation["volume_value"]),
+        })
+    return rows
 
-    normalized_rows.sort(key=lambda r: r["date"])
-    return normalized_rows
+
+def fetch_approved_sample_prices(
+    provider_identifier: str,
+    path: str | Path = REFERENCE_SAMPLE,
+) -> list[dict[str, Any]]:
+    payload = load_bloomberg_reference_sample(path)
+    series = find_reference_series(payload, provider_identifier)
+    return normalize_reference_series(series)
+
+
+def fetch_raw_bloomberg_history(identifier, start_date, end_date):
+    # The instructor supplies or demonstrates the environment-specific implementation.
+    raise NotImplementedError("LIVE Bloomberg acquisition is not available in APPROVED_SAMPLE mode.")
+
+
+def normalize_bloomberg_history(raw_data, canonical_ticker):
+    if isinstance(raw_data, dict) and "observations" in raw_data:
+        rows = []
+        for observation in raw_data["observations"]:
+            rows.append({
+                "date": observation["observation_date"],
+                "ticker": canonical_ticker,
+                "open": float(observation["open_value"]),
+                "high": float(observation["high_value"]),
+                "low": float(observation["low_value"]),
+                "close": float(observation["close_value"]),
+                "volume": int(observation["volume_value"]),
+            })
+        return rows
+    raise NotImplementedError("LIVE normalization requires documented LIVE fields from TD09.")

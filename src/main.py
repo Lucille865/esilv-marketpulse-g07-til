@@ -1,21 +1,29 @@
-import csv
+﻿import csv
 import json
+import sys
 from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from src.analytics import (
     align_series,
     calculate_base_100,
     calculate_period_return,
     calculate_relative_performance,
 )
-from src.providers.yahoo_provider import YAHOO_SYMBOLS, fetch_yahoo_prices
+from src.providers.bloomberg_provider import (
+    BLOOMBERG_IDENTIFIERS,
+    fetch_approved_sample_prices,
+)
 
 DATA_DIR = Path("data/sample")
 
 LOOKBACK_LABEL = "1 month"
 INTERVAL_LABEL = "Daily"
+ACCESS_MODE = "APPROVED_SAMPLE"
 
-
-# --- Chargement des données ---
 
 def load_instruments():
     with open(DATA_DIR / "instruments.json", encoding="utf-8") as file:
@@ -27,139 +35,101 @@ def load_prices():
         return list(csv.DictReader(file))
 
 
-# --- Traitement & Extraction ---
-
-def filter_prices(prices, ticker):
-    return [row for row in prices if row["ticker"] == ticker]
-
-def get_first_close(prices):
-    return float(prices[0]["close"])
-
-
-def get_last_close(prices):
-    return float(prices[-1]["close"])
-
-def get_first_date(prices):
-    return prices[0]["date"]
-
-
-def get_last_date(prices):
-    return prices[-1]["date"]
-
-def display_market_summary(asset, prices, show_currency=True):
-    currency = f" {asset['currency']}" if show_currency else ""
-
-    print(f"{asset['ticker']} - {asset['name']}")
-    print(f"Observations : {len(prices)}")
-    print(f"First date   : {get_first_date(prices)}")
-    print(f"Last date    : {get_last_date(prices)}")
-    print(f"First close  : {get_first_close(prices):.2f}{currency}")
-    print(f"Last close   : {get_last_close(prices):.2f}{currency}")
-    
-def display_configuration():
-    print("Market configuration")
-    print(f"Period   : {LOOKBACK_LABEL}")
-    print(f"Interval : {INTERVAL_LABEL}")
-
-def normalize_price_row(row):
-    return {
-        "date": row["date"],
-        "ticker": row["ticker"],
-        "open": float(row["open"]),
-        "high": float(row["high"]),
-        "low": float(row["low"]),
-        "close": float(row["close"]),
-        "volume": int(row["volume"]),
-    }
-
-    
-#main
-print()
-def main():
+def build_market_snapshot(access_mode: str = ACCESS_MODE) -> dict:
+    """Build the canonical MarketPulse application snapshot shared by terminal and Dash."""
     instruments = load_instruments()
-    #prices = load_prices()
-    #normalized_prices = [
-    #normalize_price_row(row)
-    #for row in prices
-    #]
-
-    #Lucille's merge
     instrument = instruments["instrument"]
-    print(instrument)
-
-    #Tom's merge 
     benchmark = instruments["benchmark"]
-    print(benchmark)
 
-    #instrument_prices = filter_prices(normalized_prices, instrument["ticker"])
-    #benchmark_prices = filter_prices(normalized_prices, benchmark["ticker"])
-
-    instrument_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
-        canonical_ticker=instrument["ticker"],
-        period="1mo",
-        interval="1d",
-    )
-
-    benchmark_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
-        canonical_ticker=benchmark["ticker"],
-        period="1mo",
-        interval="1d",
-    )
+    if access_mode == "APPROVED_SAMPLE":
+        instrument_prices = fetch_approved_sample_prices(
+            BLOOMBERG_IDENTIFIERS[instrument["ticker"]]
+        )
+        benchmark_prices = fetch_approved_sample_prices(
+            BLOOMBERG_IDENTIFIERS[benchmark["ticker"]]
+        )
+        provider_label = "Bloomberg stage - APPROVED_SAMPLE"
+    else:
+        raise NotImplementedError(
+            f"Unsupported Bloomberg access mode: {access_mode}"
+        )
 
     aligned_instrument, aligned_benchmark = align_series(
-    instrument_prices,
-    benchmark_prices,
+        instrument_prices,
+        benchmark_prices,
     )
 
-    instrument_return = calculate_period_return(
-        aligned_instrument
+    instrument_return = calculate_period_return(aligned_instrument)
+    benchmark_return = calculate_period_return(aligned_benchmark)
+    relative_performance = calculate_relative_performance(
+        instrument_return,
+        benchmark_return,
     )
 
-    benchmark_return = calculate_period_return(
-        aligned_benchmark
-    )
+    instrument_base_100 = calculate_base_100(aligned_instrument)
+    benchmark_base_100 = calculate_base_100(aligned_benchmark)
 
-    instrument_latest = instrument_prices[-1]
-    benchmark_latest = benchmark_prices[-1]
+    return {
+        "provider": provider_label,
+        "lookback": LOOKBACK_LABEL,
+        "interval": INTERVAL_LABEL,
+        "access_mode": access_mode,
+        "instrument": {
+            "ticker": instrument["ticker"],
+            "name": instrument["name"],
+        },
+        "benchmark": {
+            "ticker": benchmark["ticker"],
+            "name": benchmark["name"],
+        },
+        "instrument_return": instrument_return,
+        "benchmark_return": benchmark_return,
+        "relative_performance": relative_performance,
+        "instrument_base_100": instrument_base_100,
+        "benchmark_base_100": benchmark_base_100,
+    }
 
+
+def print_market_snapshot(snapshot: dict) -> None:
+    """Render the shared MarketPulse snapshot to the terminal."""
+    instrument = snapshot["instrument"]
+    benchmark = snapshot["benchmark"]
+    inst_base = snapshot["instrument_base_100"]
+    bench_base = snapshot["benchmark_base_100"]
 
     print("=== MarketPulse ===")
     print()
-    display_configuration()
-    print()
-    print("Instrument")
-    print(f"{instrument['ticker']} - {instrument['name']}")
-    print(f"Last price: {instrument_latest['close']} {instrument['currency']}")
-    print(f"Start date   : {get_first_date(aligned_instrument)}")
-    print(f"End date     : {get_last_date(aligned_instrument)}")
-    display_market_summary(instrument, instrument_prices, show_currency=True)
-    print()
-    print("Benchmark")
-    print(f"{benchmark['ticker']} - {benchmark['name']}")
-    print(f"Last level: {benchmark_latest['close']}")
-    print(f"Start date   : {get_first_date(aligned_instrument)}")
-    print(f"End date     : {get_last_date(aligned_instrument)}")
-    print()
-    print(f"Period: {LOOKBACK_LABEL}")
-    print(f"Interval: {INTERVAL_LABEL}")
-    print()
-    print("Observations")
-    print(f"{instrument['ticker']}: {len(instrument_prices)}")
-    print(f"{benchmark['ticker']}: {len(benchmark_prices)}")
-    display_market_summary(benchmark, benchmark_prices, show_currency=False)
-
     print("Provider")
-    print("Yahoo Finance via yfinance")
+    print("Bloomberg stage" if snapshot.get("access_mode") == "APPROVED_SAMPLE" else snapshot["provider"])
+    print()
+    print("Access mode")
+    print(snapshot.get("access_mode", "APPROVED_SAMPLE"))
     print()
     print("Market configuration")
     print(f"Instrument : {instrument['ticker']} - {instrument['name']}")
     print(f"Benchmark  : {benchmark['name']}")
-    print(f"Period     : {LOOKBACK_LABEL}")
-    print(f"Interval   : {INTERVAL_LABEL}")
+    print(f"Period     : {snapshot['lookback']}")
+    print(f"Interval   : {snapshot['interval']}")
+    print()
+    print("Aligned window")
+    print(f"Start date   : {inst_base[0]['date']}")
+    print(f"End date     : {inst_base[-1]['date']}")
+    print(f"Observations : {len(inst_base)}")
+    print()
+    print("Performance")
+    print(f"{instrument['ticker']} return      : {snapshot['instrument_return']:+.2f}%")
+    print(f"{benchmark['ticker']} return    : {snapshot['benchmark_return']:+.2f}%")
+    print(f"Relative perf    : {snapshot['relative_performance']:+.2f} pp")
+    print()
+    print("Base 100")
+    print(f"{instrument['ticker']} ({inst_base[0]['date']} -> {inst_base[-1]['date']}): {inst_base[0]['value']:.2f} -> {inst_base[-1]['value']:.2f}")
+    print(f"{benchmark['ticker']} ({bench_base[0]['date']} -> {bench_base[-1]['date']}): {bench_base[0]['value']:.2f} -> {bench_base[-1]['value']:.2f}")
+
+
+def main():
+    snapshot = build_market_snapshot()
+    print_market_snapshot(snapshot)
 
 
 if __name__ == "__main__":
     main()
-
