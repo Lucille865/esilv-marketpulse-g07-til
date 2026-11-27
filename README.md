@@ -1,4 +1,4 @@
-# ESILV MarketPulse
+# MarketPulse – Team G07 release
 
 <p align="center">
   <img
