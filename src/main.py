@@ -167,8 +167,6 @@ def main():
     benchmark_base_100 = snapshot["benchmark_base_100"]
 
     print()
-    print(instrument)
-    print(benchmark)
 
     instrument_latest = instrument_prices[-1]
     benchmark_latest = benchmark_prices[-1]
