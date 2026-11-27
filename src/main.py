@@ -1,6 +1,7 @@
 ﻿import csv
 import json
 from pathlib import Path
+
 from providers.bloomberg_provider import fetch_bloomberg_prices
 
 from analytics import (
@@ -83,6 +84,9 @@ def display_configuration():
     print(f"Period   : {LOOKBACK_LABEL}")
     print(f"Interval : {INTERVAL_LABEL}")
 
+
+# --- Shared application snapshot ---
+
 def build_market_snapshot():
     # Business configuration
     provider = "Bloomberg stage"
@@ -90,12 +94,20 @@ def build_market_snapshot():
     lookback = "1mo"
     interval = "1d"
 
-    instrument = "AAPL"
-    benchmark = "SP500"
+    # Load instrument and benchmark metadata
+    instruments = load_instruments()
+
+    instrument = instruments["instrument"]
+    benchmark = instruments["benchmark"]
 
     # Fetch canonical rows
-    instrument_prices = fetch_bloomberg_prices(instrument)
-    benchmark_prices = fetch_bloomberg_prices(benchmark)
+    instrument_prices = fetch_bloomberg_prices(
+        instrument["ticker"]
+    )
+
+    benchmark_prices = fetch_bloomberg_prices(
+        benchmark["ticker"]
+    )
 
     # Reuse existing alignment
     aligned_instrument, aligned_benchmark = align_series(
@@ -104,16 +116,26 @@ def build_market_snapshot():
     )
 
     # Reuse existing analytics
-    instrument_return = calculate_period_return(aligned_instrument)
-    benchmark_return = calculate_period_return(aligned_benchmark)
+    instrument_return = calculate_period_return(
+        aligned_instrument
+    )
+
+    benchmark_return = calculate_period_return(
+        aligned_benchmark
+    )
 
     relative_performance = calculate_relative_performance(
         instrument_return,
         benchmark_return
     )
 
-    instrument_base_100 = calculate_base_100(aligned_instrument)
-    benchmark_base_100 = calculate_base_100(aligned_benchmark)
+    instrument_base_100 = calculate_base_100(
+        aligned_instrument
+    )
+
+    benchmark_base_100 = calculate_base_100(
+        aligned_benchmark
+    )
 
     # Shared application result
     snapshot = {
@@ -127,10 +149,11 @@ def build_market_snapshot():
         "benchmark_return": benchmark_return,
         "relative_performance": relative_performance,
         "instrument_base_100": instrument_base_100,
-        "benchmark_base_100": benchmark_base_100
+        "benchmark_base_100": benchmark_base_100,
     }
 
     return snapshot
+
 
 # --- Main ---
 
@@ -148,10 +171,19 @@ def main():
     print(snapshot["access_mode"])
 
     print("\n--- Market context ---")
-    print("Instrument : AAPL - Apple Inc.")
-    print("Benchmark  : S&P 500")
-    print("Period     : 1 month")
-    print("Interval   : Daily")
+
+    print(
+        f"Instrument : {snapshot['instrument']['ticker']} - "
+        f"{snapshot['instrument']['name']}"
+    )
+
+    print(
+        f"Benchmark  : {snapshot['benchmark']['ticker']} - "
+        f"{snapshot['benchmark']['name']}"
+    )
+
+    print(f"Period     : {LOOKBACK_LABEL}")
+    print(f"Interval   : {INTERVAL_LABEL}")
 
     print("\n--- Period returns ---")
     print("AAPL return:", snapshot["instrument_return"])
@@ -173,6 +205,7 @@ def main():
     )
 
     print("\n" + "=" * 50)
+
 
 if __name__ == "__main__":
     main()
