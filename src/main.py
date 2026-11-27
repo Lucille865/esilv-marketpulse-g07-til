@@ -13,6 +13,9 @@ from analytics import (
 # TD08
 from providers.yahoo_provider import YAHOO_SYMBOLS, fetch_yahoo_prices
 
+# TD10
+from providers.bloomberg_provider import ACCESS_MODE, fetch_bloomberg_prices
+
 DATA_DIR = Path("data/sample")
 
 LOOKBACK_LABEL = "1 month"
@@ -79,38 +82,48 @@ def display_configuration():
     print(f"Interval : {INTERVAL_LABEL}")
 
 
-#main
-print()
-def main():
+# TD10 
+def build_market_snapshot(provider="bloomberg"):
     instruments = load_instruments()
 
     #Lucille's merge
     instrument = instruments["instrument"]
-    print(instrument)
 
     #Tom's merge 
     benchmark = instruments["benchmark"]
-    print(benchmark)
 
-    # TD08
-    instrument_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
-        canonical_ticker=instrument["ticker"],
-        period="1mo",
-        interval="1d",
-    )
-    benchmark_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
-        canonical_ticker=benchmark["ticker"],
-        period="1mo",
-        interval="1d",
-    )
+    if provider == "yahoo":
+        # TD08
+        instrument_prices = fetch_yahoo_prices(
+            symbol=YAHOO_SYMBOLS[instrument["ticker"]],
+            canonical_ticker=instrument["ticker"],
+            period="1mo",
+            interval="1d",
+        )
+        benchmark_prices = fetch_yahoo_prices(
+            symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
+            canonical_ticker=benchmark["ticker"],
+            period="1mo",
+            interval="1d",
+        )
+        provider_label = "Yahoo Finance via yfinance"
+        access_mode = "REMOTE"
+    else:
+        # TD10
+        instrument_prices = fetch_bloomberg_prices(instrument["ticker"])
+        benchmark_prices = fetch_bloomberg_prices(benchmark["ticker"])
+        provider_label = f"Bloomberg stage - {ACCESS_MODE}"
+        access_mode = ACCESS_MODE
 
     # TD07
     aligned_instrument, aligned_benchmark = align_series(
         instrument_prices,
         benchmark_prices,
     )
+
+    if not aligned_instrument:  # TD10
+        raise ValueError("No common dates between instrument and benchmark")
+
     instrument_return = calculate_period_return(aligned_instrument)
     benchmark_return = calculate_period_return(aligned_benchmark)
     relative_performance = calculate_relative_performance(
@@ -120,14 +133,54 @@ def main():
     instrument_base_100 = calculate_base_100(aligned_instrument)
     benchmark_base_100 = calculate_base_100(aligned_benchmark)
 
+    # TD10
+    return {
+        "provider": provider_label,
+        "access_mode": access_mode,
+        "lookback": LOOKBACK_LABEL,
+        "interval": INTERVAL_LABEL,
+        "instrument": instrument,
+        "benchmark": benchmark,
+        "instrument_return": instrument_return,
+        "benchmark_return": benchmark_return,
+        "relative_performance": relative_performance,
+        "instrument_base_100": instrument_base_100,
+        "benchmark_base_100": benchmark_base_100,
+        "instrument_prices": instrument_prices,
+        "benchmark_prices": benchmark_prices,
+    }
+
+
+#main
+def main():
+    snapshot = build_market_snapshot()  # TD10
+
+    # TD10 
+    instrument = snapshot["instrument"]
+    benchmark = snapshot["benchmark"]
+    instrument_prices = snapshot["instrument_prices"]
+    benchmark_prices = snapshot["benchmark_prices"]
+    instrument_return = snapshot["instrument_return"]
+    benchmark_return = snapshot["benchmark_return"]
+    relative_performance = snapshot["relative_performance"]
+    instrument_base_100 = snapshot["instrument_base_100"]
+    benchmark_base_100 = snapshot["benchmark_base_100"]
+
+    print()
+    print(instrument)
+    print(benchmark)
+
     instrument_latest = instrument_prices[-1]
     benchmark_latest = benchmark_prices[-1]
 
     print("=== MarketPulse ===")
     print()
-    # TD08
+    # TD08 / TD10
     print("Provider")
-    print("Yahoo Finance via yfinance")
+    print(snapshot["provider"])
+    print()
+    print("Access mode")  # TD10
+    print(snapshot["access_mode"])  # TD10
     print()
     display_configuration()
     print()
