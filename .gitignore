@@ -1,21 +1,38 @@
-# Python
+# Python temporary files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Virtual environments
 .venv/
 venv/
+env/
 
-# Environment variables
+# Temporary Word files
+~$*.docx
+
+# Temporary files
+*.tmp
+*.log
+
+# Local environment variables and credentials
 .env
+.env.local
 
-# IDE
+# IDE configuration
 .vscode/
 .idea/
 
-# OS
+# Operating system files
 .DS_Store
+Thumbs.db
+Desktop.ini
 
-# Generated data
-data/raw/
-data/processed/
+# Python testing and cache
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
