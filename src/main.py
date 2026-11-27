@@ -1,6 +1,7 @@
 ﻿import csv
 import json
 from pathlib import Path
+from providers.bloomberg_provider import fetch_bloomberg_prices
 
 from analytics import (
     align_series,
@@ -82,84 +83,96 @@ def display_configuration():
     print(f"Period   : {LOOKBACK_LABEL}")
     print(f"Interval : {INTERVAL_LABEL}")
 
+def build_market_snapshot():
+    # Business configuration
+    provider = "Bloomberg stage"
+    access_mode = "APPROVED_SAMPLE"
+    lookback = "1mo"
+    interval = "1d"
 
-# --- Main ---
+    instrument = "AAPL"
+    benchmark = "SP500"
 
-def main():
-    instruments = load_instruments()
+    # Fetch canonical rows
+    instrument_prices = fetch_bloomberg_prices(instrument)
+    benchmark_prices = fetch_bloomberg_prices(benchmark)
 
-    instrument = instruments["instrument"]
-    benchmark = instruments["benchmark"]
-
-    instrument_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[instrument["ticker"]],
-        canonical_ticker=instrument["ticker"],
-        period="1mo",
-        interval="1d",
-    )
-
-    benchmark_prices = fetch_yahoo_prices(
-        symbol=YAHOO_SYMBOLS[benchmark["ticker"]],
-        canonical_ticker=benchmark["ticker"],
-        period="1mo",
-        interval="1d",
-    )
-
+    # Reuse existing alignment
     aligned_instrument, aligned_benchmark = align_series(
         instrument_prices,
-        benchmark_prices,
+        benchmark_prices
     )
 
-    if not aligned_instrument or not aligned_benchmark:
-        raise ValueError("No common observation dates")
-
+    # Reuse existing analytics
     instrument_return = calculate_period_return(aligned_instrument)
     benchmark_return = calculate_period_return(aligned_benchmark)
 
     relative_performance = calculate_relative_performance(
         instrument_return,
-        benchmark_return,
+        benchmark_return
     )
 
-    instrument_base = calculate_base_100(aligned_instrument)
-    benchmark_base = calculate_base_100(aligned_benchmark)
+    instrument_base_100 = calculate_base_100(aligned_instrument)
+    benchmark_base_100 = calculate_base_100(aligned_benchmark)
 
-    print("=== MarketPulse ===\n")
+    # Shared application result
+    snapshot = {
+        "provider": provider,
+        "access_mode": access_mode,
+        "lookback": lookback,
+        "interval": interval,
+        "instrument": instrument,
+        "benchmark": benchmark,
+        "instrument_return": instrument_return,
+        "benchmark_return": benchmark_return,
+        "relative_performance": relative_performance,
+        "instrument_base_100": instrument_base_100,
+        "benchmark_base_100": benchmark_base_100
+    }
 
-    print("Provider")
-    print("Yahoo Finance via yfinance\n")
+    return snapshot
 
-    display_configuration()
-    print()
+# --- Main ---
 
-    print("Instrument")
-    display_market_summary(
-        instrument, aligned_instrument, show_currency=True
+def main():
+    snapshot = build_market_snapshot()
+
+    print("=" * 50)
+    print("MARKETPULSE")
+    print("=" * 50)
+
+    print("\n--- Provider ---")
+    print(snapshot["provider"])
+
+    print("\n--- Access mode ---")
+    print(snapshot["access_mode"])
+
+    print("\n--- Market context ---")
+    print("Instrument : AAPL - Apple Inc.")
+    print("Benchmark  : S&P 500")
+    print("Period     : 1 month")
+    print("Interval   : Daily")
+
+    print("\n--- Period returns ---")
+    print("AAPL return:", snapshot["instrument_return"])
+    print("SP500 return:", snapshot["benchmark_return"])
+
+    print("\n--- Relative performance ---")
+    print("AAPL vs SP500:", snapshot["relative_performance"])
+
+    print("\n--- Base 100 ---")
+
+    print(
+        "AAPL final value:",
+        snapshot["instrument_base_100"][-1]
     )
-    print(f"Period return : {instrument_return:+.2f}%")
-    print()
 
-    print("Benchmark")
-    display_market_summary(
-        benchmark, aligned_benchmark, show_currency=False
+    print(
+        "SP500 final value:",
+        snapshot["benchmark_base_100"][-1]
     )
-    print(f"Period return : {benchmark_return:+.2f}%")
-    print()
 
-    print("Relative performance")
-    print(f"{instrument['ticker']} vs {benchmark['ticker']} : "
-          f"{relative_performance:+.2f} percentage points")
-    print()
-
-    print("Base 100")
-    print(f"{instrument['ticker']} : "
-          f"{instrument_base[0]['value']:.2f} -> "
-          f"{instrument_base[-1]['value']:.2f}")
-
-    print(f"{benchmark['ticker']} : "
-          f"{benchmark_base[0]['value']:.2f} -> "
-          f"{benchmark_base[-1]['value']:.2f}")
-
+    print("\n" + "=" * 50)
 
 if __name__ == "__main__":
     main()
