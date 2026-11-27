@@ -112,7 +112,7 @@ def build_market_snapshot(provider="bloomberg"):
         # TD10
         instrument_prices = fetch_bloomberg_prices(instrument["ticker"])
         benchmark_prices = fetch_bloomberg_prices(benchmark["ticker"])
-        provider_label = "Bloomberg stage"
+        provider_label = f"Bloomberg stage - {ACCESS_MODE}"
         access_mode = ACCESS_MODE
 
     # TD07
